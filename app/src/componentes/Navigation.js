@@ -16,13 +16,10 @@ function Navigation() {
                             <li className='nav-item'>
                                 <Link className='nav-link' to='/books'>Books</Link>
                             </li>
-                            <li className='nav-item dropdown'>
-                                <Link className="nav-link dropdown-toggle" to="/users" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <li className='nav-item'>
+                                <Link className="nav-link" to="/users" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Users
                                 </Link>
-                                <ul className="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <li><Link className="dropdown-item" to="/users/:id">Users ID</Link></li>
-                                </ul>
                             </li>
                         </ul>
                     </div>
