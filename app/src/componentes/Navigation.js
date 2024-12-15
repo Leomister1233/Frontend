@@ -27,7 +27,6 @@ function Navigation() {
                         </ul>
                     </div>
                 </div>
-
             </div>
         </nav>
     )

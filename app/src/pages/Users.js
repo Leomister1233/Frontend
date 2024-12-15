@@ -1,202 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Container, Row, Col, Button, Spinner, Alert } from 'react-bootstrap';
+import UserCard from '../componentes/UserCard'; // Import the UserCard component
 
-function Users() {
-    const [formData, setFormData] = useState({
-        first_name: '',
-        last_name: '',
-        year_of_birth: '',
-        job: '',
-        reviews: [{ book_id: '', score: '', recommendation: '', review_date: Date.now() }], // At least one review
-      });
-    
-      // Handle changes in form input fields
-      const handleInputChange = (e) => {
-        const { name, value, dataset } = e.target;
-        if (name === 'reviews') {
-          // Update the review fields dynamically
-          const { reviewIndex } = dataset;
-          const updatedReviews = [...formData.reviews];
-          updatedReviews[reviewIndex][name] = value;
-          setFormData({ ...formData, reviews: updatedReviews });
-        } else {
-          setFormData({
-            ...formData,
-            [name]: value,
-          });
-        }
-      };
-    
-      // Handle adding a new review
-      const handleAddReview = () => {
-        setFormData({
-          ...formData,
-          reviews: [
-            ...formData.reviews,
-            { book_id: '', score: '', recommendation: '', review_date: Date.now() },
-          ],
-        });
-      };
-    
-      // Handle the form submission
-      const handleSubmit = (e) => {
-        e.preventDefault();
-    
-        // Ensure there's at least one review before submitting
-        if (formData.reviews.some(review => review.book_id && review.score)) {
-          console.log('User Data Submitted:', formData);
-          setFormData({
-            first_name: '',
-            last_name: '',
-            year_of_birth: '',
-            job: '',
-            reviews: [{ book_id: '', score: '', recommendation: '', review_date: Date.now() }], // At least one review
-          });
-        } else {
-          alert('At least one review must be added.');
-        }
-      };
-    
-    return (
-        <div className="container">
-          <h1>Create a New User</h1>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-3">
-              <label htmlFor="first_name" className="form-label">
-                First Name
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                id="first_name"
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="mb-3">
-              <label htmlFor="last_name" className="form-label">
-                Last Name
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                id="last_name"
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="mb-3">
-              <label htmlFor="year_of_birth" className="form-label">
-                Year of Birth
-              </label>
-              <input
-                type="number"
-                className="form-control"
-                id="year_of_birth"
-                name="year_of_birth"
-                value={formData.year_of_birth}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="mb-3">
-              <label htmlFor="job" className="form-label">
-                Job Title
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                id="job"
-                name="job"
-                value={formData.job}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            {/* Dynamic review input fields */}
-            <div className="mb-3">
-              <label htmlFor="reviews" className="form-label">
-                Reviews (At least one required)
-              </label>
-              {formData.reviews.map((review, index) => (
-                <div key={index} className="border p-3 mb-3">
-                  <div className="mb-2">
-                    <label htmlFor={`book_id_${index}`} className="form-label">
-                      Book ID
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id={`book_id_${index}`}
-                      name="book_id"
-                      data-review-index={index}
-                      value={review.book_id}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="mb-2">
-                    <label htmlFor={`score_${index}`} className="form-label">
-                      Score (1-5)
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      id={`score_${index}`}
-                      name="score"
-                      data-review-index={index}
-                      value={review.score}
-                      onChange={handleInputChange}
-                      required
-                      min="1"
-                      max="5"
-                    />
-                  </div>
-                  <div className="mb-2">
-                    <label htmlFor={`recommendation_${index}`} className="form-label">
-                      Recommendation (true/false)
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id={`recommendation_${index}`}
-                      name="recommendation"
-                      data-review-index={index}
-                      value={review.recommendation}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                    <div className="mb-2">
-                        <input
-                            type="text"
-                            className="form-control"
-                            id={`review_date_${index}`}
-                            name="review_date"
-                            data-review-index={index}
-                            value={review.review_date ? new Date(review.review_date).toISOString() : ''}
-                            disabled
-                        />
-                    </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleAddReview}
-              >
-                Add Another Review
-              </button>
-            </div>
-    
-            <button type="submit" className="btn btn-primary">
-              Create User
-            </button>
-          </form>
+function UsersPage() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Memoize fetchUsers to avoid unnecessary re-renders
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3000/api/users/getusers?page=${currentPage}&limit=20`);
+      const data = await response.json();
+      setUsers(data.users);
+      setCurrentPage(data.currentPage);
+      setTotalPages(data.totalPages || 1);
+    } catch (error) {
+      console.error('Error fetching users', error);
+      setError('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage]); // Only rerun fetchUsers when currentPage changes
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]); // Add fetchUsers as a dependency
+
+  return (
+    <Container>
+      <h1>User List</h1>
+
+      {loading && (
+        <div className="text-center">
+          <Spinner animation="border" variant="primary" />
         </div>
-      );
+      )}
+
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      <Row>
+        {users.map(user => (
+          <Col key={user._id} md={4} className="mb-3">
+            <UserCard
+              _id={user._id}
+              first_name={user.first_name}
+              last_name={user.last_name}
+            />
+          </Col>
+        ))}
+      </Row>
+
+      {/* Pagination Controls */}
+      <div className="d-flex justify-content-center mt-4">
+        <Button
+          disabled={currentPage === 1} // Disable if on the first page
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} // Decrement page
+        >
+          Previous
+        </Button>
+        <span className="mx-3">
+          Page {currentPage} of {totalPages}
+        </span>
+        <Button
+          disabled={currentPage >= totalPages} // Disable if on the last page
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} // Increment page
+        >
+          Next
+        </Button>
+      </div>
+    </Container>
+  );
 }
 
-export default Users
+export default UsersPage;
+
+
